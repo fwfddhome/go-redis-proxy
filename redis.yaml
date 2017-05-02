@@ -1,0 +1,15 @@
+zookeeper_servers: # if empty, current server will not register into zookeeper
+  - 10.144.35.95:2181
+cpu_num: 5 # default all cpu_num
+client_connections: 10240 # default 102400
+timeout: 100 # default 100
+backlog: 1024 # default 1024
+server_retry_timeout: 200 # default 200
+server_failure_limit: 2 # default 2
+
+proxy_clusters:
+  - cluster: item_cluster
+    listen: localhost:6679
+    prefix: 4D
+    servers:
+      - 10.58.56.189:8331

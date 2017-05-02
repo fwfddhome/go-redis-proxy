@@ -1,0 +1,26 @@
+<seelog minlevel="debug">
+    <outputs formatid="main">
+        <filter levels="debug,info,critical,error">
+            <console/>
+        </filter>
+        <filter levels="debug">
+            <buffered size="1000000" flushperiod="1000">
+                <rollingfile type="date" filename="./log/debug.log" datepattern="2016.01.02" maxrolls="10"/>
+            </buffered>
+        </filter>
+        <filter levels="info">
+            <buffered size="1000000" flushperiod="1000">
+                <rollingfile type="date" filename="./log/info.log" datepattern="2016.01.02" maxrolls="10"/>
+            </buffered>
+        </filter>
+        <filter levels="error,critical">
+            <buffered size="1000000" flushperiod="1000">
+                <rollingfile type="date" filename="./log/error.log" datepattern="2016.01.02" maxrolls="10"/>
+            </buffered>
+        </filter>
+    </outputs>
+
+    <formats>
+        <format id="main" format="%Date %Time [%LEV] %Msg%n"/>
+    </formats>
+</seelog>

@@ -1,0 +1,153 @@
+/*
+package proxy
+
+import (
+	"github.com/carlvine500/redis-go-cluster"
+	log "github.com/cihub/seelog"
+	"github.com/samuel/go-zookeeper/zk"
+	"net"
+	"reflect"
+	"strconv"
+	"strings"
+	"time"
+	"encoding/json"
+)
+
+const (
+	zkBusinessesPath = "/gcache/businesses"
+	zkClustersPath = "/gcache/clusters"
+	zkProxyPath = "/gcache/proxygroups"
+)
+//TODO map都不是线程安全的,在zk监听时需要调整,建议用rwlock
+var clusters = make(map[string]*redis.Cluster)
+var businessNamespaceCluster = make(map[string]string)
+
+func GetClusterByNamespace(namespace string) *redis.Cluster {
+	clusterName := businessNamespaceCluster[namespace]
+	return clusters[clusterName]
+}
+
+func InitClustersAndRegisterProxy(config *ProxyConfig) {
+	zkConn := connect(config.Proxy.Zkservers)
+	defer zkConn.Close()
+
+	initClusters(config, zkConn)
+	initBusinesses(config, zkConn)
+	registerProxy(config, zkConn)
+}
+
+func createCluster(config *ProxyConfig, hostAndPorts []string) (*redis.Cluster, error) {
+	cluster, err := redis.NewCluster(
+		&redis.Options{
+			StartNodes:   hostAndPorts,
+			ConnTimeout:  2000 * time.Millisecond,
+			ReadTimeout:  200 * time.Millisecond,
+			WriteTimeout: 200 * time.Millisecond,
+			KeepAlive:    config.Redis.Keepalive,
+			AliveTime:    time.Duration(config.Redis.Alivetime) * time.Second,
+		})
+
+	return cluster, err
+}
+
+func initClusters(config *ProxyConfig, conn *zk.Conn) {
+
+	children, _, err := conn.Children(zkClustersPath)
+	must(err)
+	for _, clusterName := range children {
+		hostAndPorts, _, err := conn.Children(zkClustersPath + "/" + clusterName)
+		must(err)
+		if (len(hostAndPorts) == 0) {
+			continue
+		}
+		log.Infof("createCluster=%s,hostAndPorts=%s", clusterName, hostAndPorts)
+		cluster, clusterErr := createCluster(config, hostAndPorts)
+		if clusterErr != nil {
+			log.Errorf("create cluster error,hostAndPorts=%s,clusterErr=%s", hostAndPorts, clusterErr)
+			continue
+		}
+		clusters[clusterName] = cluster
+	}
+}
+
+func initBusinesses(config *ProxyConfig, conn *zk.Conn) {
+	businesses, _, err := conn.Children(zkBusinessesPath)
+	must(err)
+	for _, businessName := range businesses {
+		businessData, _, err := conn.Get(zkBusinessesPath + "/" + businessName)
+		must(err)
+		if (businessData == nil) {
+			continue
+		}
+		bc := businessConfig{}
+		bizStr := string(businessData)
+		parseToObj(bizStr, &bc)
+		jsonResult, _ := json.Marshal(bc)
+		log.Infof("createBusiness=%s,config=%s", businessName, jsonResult)
+		businessNamespaceCluster[bc.Namespace] = bc.Cluster
+	}
+}
+
+func registerProxy(config *ProxyConfig, conn *zk.Conn) {
+	flags := int32(zk.FlagEphemeral)
+	acl := zk.WorldACL(zk.PermAll)
+	localHostAndPort := GetOutboundIP() + ":" + strconv.Itoa(config.Proxy.Port)
+	log.Infof("registerProxy,localHostAndPort=%s", localHostAndPort)
+	exist, _, err := conn.Exists(zkProxyPath)
+	must(err)
+	if (!exist) {
+		conn.Create(zkProxyPath, []byte{}, int32(0), zk.WorldACL(zk.PermAll))
+	}
+	_, err = conn.Create(zkProxyPath + "/" + config.Proxy.Group, []byte(localHostAndPort), flags, acl)
+	must(err)
+}
+
+func GetOutboundIP() string {
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		log.Error(err)
+	}
+	defer conn.Close()
+
+	localAddr := conn.LocalAddr().String()
+	idx := strings.LastIndex(localAddr, ":")
+
+	return localAddr[0:idx]
+}
+
+func parseToObj(input string, obj interface{}) {
+	dataPairs := strings.Split(input, "|")
+	s := reflect.ValueOf(obj).Elem()
+	for _, dataPair := range dataPairs {
+		kvPairs := strings.Split(dataPair, ":")
+		if len(kvPairs) == 2 {
+			nameStr := kvPairs[0]
+			name := s.FieldByName(strings.ToUpper(string(nameStr[0])) + nameStr[1:])
+			if name.CanAddr() {
+				name.Set(reflect.ValueOf(kvPairs[1]))
+			}
+		}
+	}
+}
+
+type businessConfig struct {
+	Cluster       string
+	Permits       string // >0: no limit,==0:forbidden
+	Clusterstate  string
+	Targetcluster string
+	Namespace     string
+}
+
+func must(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
+
+func connect(zookeeperServers string) *zk.Conn {
+	zks := strings.Split(zookeeperServers, ",")
+	conn, _, err := zk.Connect(zks, 60 * time.Second)
+	must(err)
+	return conn
+}
+*/
